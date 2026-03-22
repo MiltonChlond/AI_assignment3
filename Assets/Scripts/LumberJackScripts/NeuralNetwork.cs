@@ -21,8 +21,8 @@ public class NeuralNetwork
         w1 = InitRandomMatrix(inputSize, hiddenSize);
         w2 = InitRandomMatrix(hiddenSize, outputSize);
 
-        b1 = new float[hiddenSize];
-        b2 = new float[outputSize];
+        b1 = InitRandomBias(hiddenSize);
+        b2 = InitRandomBias(outputSize);
     }
 
     public float[] Run(float[] inputs)
@@ -39,6 +39,7 @@ public class NeuralNetwork
             }
 
             hidden[i] = Mathf.Max(0, activation);
+            //hidden[i] = activation;
         }
 
         for(int i = 0; i < outputSize; i++)
@@ -50,6 +51,7 @@ public class NeuralNetwork
             }
 
             outputLayer[i] = Mathf.Max(0, activation);
+            //outputLayer[i] = activation;
         }
 
         return outputLayer; 
@@ -62,9 +64,18 @@ public class NeuralNetwork
         {
             for(int j = 0; j < y; j++)
             {
-                matrix[i, j] = Random.Range(-1, 1);
+                matrix[i, j] = Random.Range(-1f, 1f);
             }
         }
         return matrix;
+    }
+    float[] InitRandomBias(int size)
+    {
+        float[] array = new float[size];
+        for (int i = 0; i < size; i++)
+        {
+            array[i] = Random.Range(-1f, 1f);
+        }
+        return array;
     }
 }

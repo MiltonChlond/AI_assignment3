@@ -1,4 +1,5 @@
 using UnityEngine;
+using TMPro;
 
 public class LumberJackAi : MonoBehaviour
 {
@@ -8,7 +9,7 @@ public class LumberJackAi : MonoBehaviour
 
     NeuralNetwork nn;
 
-    float inventory;
+    public float inventory;
     bool lineOfSight;
 
     int maximumDistance = 60; //used for normalizing distances for input, 60 = plane/ground size
@@ -17,9 +18,15 @@ public class LumberJackAi : MonoBehaviour
     float moveSpeed = 4;
     Vector3 targetPosForSearching = Vector3.zero;
 
+    LayerMask layerMask;
+
+    [SerializeField] TextMeshProUGUI text;
+
     void Start()
     {
-        nn = new NeuralNetwork(4, 8, 3);
+        inventory = 0;
+        nn = new NeuralNetwork(3, 8, 3);
+        layerMask = LayerMask.GetMask("AIagents");
     }
 
     int Decide()
@@ -32,16 +39,25 @@ public class LumberJackAi : MonoBehaviour
 
         float[] output = nn.Run(GetInputs());
 
+
         if (!lineOfSight) //om ingen line of sight vet lumberjack inte om var spelare finns så det är omöjligt att lämna trä (output index 1 motsvara beteende för det)
             output[1] = Mathf.NegativeInfinity;
+        else
+            output[2] = Mathf.NegativeInfinity;
 
-        if (closestTree == null || closestTree.Fallen)
-            closestTree = treeManager.FindClosestTree(transform.position);
-        if (closestTree == null || closestTree.Fallen)
+        if (closestTree == null || closestTree.Fallen || inventory >= maximumInventory)
             output[0] = Mathf.NegativeInfinity; //if no trees left = cant gather wood
 
+        if (inventory <= maximumInventory * 0.1f && closestTree != null)
+            output[1] = Mathf.NegativeInfinity;
+
+        for (int i = 0; i < output.Length; i++)
+        {
+            Debug.Log(output[i] + " output: " + i);
+        }
+
         int index = 0; //index of the highest activated output
-        for(int i = 0; i < output.Length; i++)
+        for (int i = 0; i < output.Length; i++)
         {
             if (output[i] > output[index])
             {
@@ -68,6 +84,10 @@ public class LumberJackAi : MonoBehaviour
             float distanceToTree = Vector3.Distance(closestTree.transform.position, transform.position);
             distanceToTreeNormalized = 1 - Mathf.Clamp(distanceToTree / maximumDistance, 0, 1);
         }
+        else
+        {
+            distanceToTreeNormalized = 0;
+        }
 
         //inventory
         inventory = this.inventory / maximumInventory;
@@ -81,10 +101,9 @@ public class LumberJackAi : MonoBehaviour
         else
         {
             lineOfSight = 0;
-            distanceToPlayerNormalized = 0;
         }
 
-        float[] inputs = { distanceToPlayerNormalized, distanceToTreeNormalized, inventory, lineOfSight };
+        float[] inputs = { distanceToPlayerNormalized, distanceToTreeNormalized, inventory };//, lineOfSight };
         return inputs;
     }
 
@@ -95,7 +114,7 @@ public class LumberJackAi : MonoBehaviour
         Ray ray = new Ray(transform.position, direction);
         RaycastHit hit;
 
-        if (Physics.Raycast(ray, out hit, Mathf.Infinity))
+        if (Physics.Raycast(ray, out hit, Mathf.Infinity, ~layerMask))
         {
             if (hit.collider.gameObject == player.gameObject)
             {
@@ -107,6 +126,8 @@ public class LumberJackAi : MonoBehaviour
 
     void Update()
     {
+        text.text = inventory.ToString();
+
         closestTree = treeManager.FindClosestTree(transform.position);
         lineOfSight = CheckLineOfSight();
 
@@ -143,11 +164,11 @@ public class LumberJackAi : MonoBehaviour
     void GetWood()
     {
         if (closestTree == null || closestTree.Fallen)
-            treeManager.FindClosestTree(transform.position);
+            return;
         if(Vector3.Distance(transform.position, closestTree.transform.position) < 2)
         {
             closestTree.Cut();
-            inventory += 10;
+            inventory += 20;
         }
         else
         {

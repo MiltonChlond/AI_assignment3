@@ -25,7 +25,7 @@ public class Tree : MonoBehaviour
 
     public void Cut()
     {
-        hp -= 25;
+        hp -= 100;
         if (hp <= 0)
         {
             fallen = true;
